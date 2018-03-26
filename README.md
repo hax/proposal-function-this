@@ -1,4 +1,4 @@
-# <function>.this
+# \<function>.this
 
 ECMAScript proposal for `this` data property of plain functions.
 
