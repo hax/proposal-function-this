@@ -78,11 +78,18 @@ const functionWithThis = function () { return this }
 const functionWithoutThis = function () {}
 const arrowFunction = () => this
 const boundFunction = functionWithThis.bind(null)
+const o = new class {
+	methodWithThis() { return this }
+	methodWithoutThis() { return super.toString() }
+}
 
 assert.equal ( getThis(functionWithThis), {value: true, enumerable: false, writable: false, configurable: true} )
 assert.equal ( getThis(functionWithoutThis), {value: false, enumerable: false, writable: false, configurable: true} )
 assert.equal ( getThis(arrowFunction), undefined )
 assert.equal ( getThis(boundFunction), undefined )
+assert.equal ( getThis(o.constructor), {value: true, enumerable: false, writable: false, configurable: true} )
+assert.equal ( getThis(o.methodWithThis), {value: true, enumerable: false, writable: false, configurable: true} )
+assert.equal ( getThis(o.methodWithoutThis), {value: false, enumerable: false, writable: false, configurable: true} )
 
 function getThis(f) {
 	return Object.getOwnPropertyDescriptor(f, 'this')
