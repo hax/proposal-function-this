@@ -184,3 +184,14 @@ EventTarget.prototype.addEventListener = function (eventType, listener, options 
 	return addEventListener.call(this, eventType, listener, options)
 }
 ```
+
+### Promise.prototype.then
+
+```js
+const {then} = Promise.prototype
+Promise.prototype.then = function (onFulfilled, onRejected) {
+	if (typeof onFulfilled === 'function') Function.asyncThrowIfThis(onFulfilled)
+	if (typeof onRejected === 'function') Function.asyncThrowIfThis(onRejected)
+	return then.call(this, onFulfilled, onRejected)
+}
+```
