@@ -1,9 +1,11 @@
-# Function this
+# <function>.this
 
 ECMAScript proposal for `this` data property of plain functions.
 
 **Stage**: pre-0
+
 **Champion**: ?
+
 **Authors**: 贺师俊 (@hax)
 
 This proposal is currently pre-stage0.
@@ -32,6 +34,41 @@ JavaScript函数中的动态`this`常被认为存在设计缺陷，难以理解�
 
 ## Use cases
 
+### event listener
+
+```js
+class Test {
+	constructor(name) {
+		this.name = name
+	}
+	showName() {
+		console.log(this.name)
+	}
+}
+
+const hax = new Test('hax')
+window.addEventListener('click', hax.showName) // <- no error, eventually output window.name
+
+// safer API:
+function on(eventType, listener) {
+	if (listener.this) throw new TypeError(
+		'listener should not need dynamic this, please use arrow function or <function>.bind to generate a bound version')
+	//...
+}
+
+$(window).on('click', hax.showName) // <- throw TypeError
+
+$(window).on('click', () => hax.showName()) // <- ok
+$(window).on('click', hax.showName.bind(hax)) // <- ok
+
+$(window).on('click', test) // <- also ok
+function test() { console.log('test') }
+```
+
+### component framework
+TODO
+
+### framework plugin
 TODO
 
 ## Semantics
@@ -68,7 +105,7 @@ Instead of boolean value property for plain functions, it could be a string valu
 
 ## Helpers
 
-These helpers functions could be leave to userland, but we include them here for convenience.
+These helpers functions could be left to userland, but we include them here for convenience.
 
 ### `Function.throwIfThis`
 
@@ -101,15 +138,15 @@ function guardThis() {
 	}
 }
 
-Function.throwIfThis(guardThis) // throw
-Function.throwIfThis(Function.toggleThis(guardThis)) // not throw
+Function.toggleThis(guardThis)
+Function.throwIfThis(guardThis) // not throw
 
 function implicitThis() {
 	return eval('this')
 }
 
-Function.throwIfThis(implictThis) // not throw
-Function.throwIfThis(Function.toggleThis(implictThis)) // throw
+Function.toggleThis(implictThis)
+Function.throwIfThis(implictThis) // throw
 ```
 
 ## Babel plugin and polyfill
