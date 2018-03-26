@@ -109,6 +109,7 @@ Instead of boolean value property for plain functions, it could be a string valu
 - bound functions: `"bound"`
 - functions with this: `"dynamic"`
 - functions without this: `"none"`
+- class constructor: `"new"`
 
 ## Helpers
 
