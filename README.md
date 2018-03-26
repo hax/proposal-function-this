@@ -160,7 +160,10 @@ TODO
 ```js
 const {forEach} = Array.prototype
 Array.prototype.forEach = function (callback, thisArg = undefined) {
-	if (thisArg === undefined && this.length) Function.throwIfThis(callback)
+	if (thisArg === undefined) {
+		if (!this.length) Function.asyncThrowIfThis(callback)
+		else Function.throwIfThis(callback)
+	}
 	return forEach.call(this, callback, thisArg)
 }
 ```
