@@ -206,3 +206,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
 	return then.call(this, onFulfilled, onRejected)
 }
 ```
+
+## Web compatibility
+
+At least one library (https://github.com/WebReflection/function.this) introducing `Function.prototype.this` which may conflict with this proposal.
