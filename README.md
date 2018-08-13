@@ -12,6 +12,8 @@ This proposal is currently pre-stage0.
 
 ## Motivation
 
+// TODO: translate to English
+
 JavaScript函数中的动态`this`常被认为存在设计缺陷，难以理解。虽然ES5加入了strict模式和Function.prototype.bind作为补救，但这些措施过于保守，以至于一些人认为这只是进一步复杂化了问题。
 
 幸好ES6加入了arrow functions和class，分担了传统函数的职责。正确使用这些特性，可以很好的将函数分为三类：
@@ -115,7 +117,7 @@ Instead of boolean value property for plain functions, it could be a string valu
 
 These helpers functions could be left to userland, but we include them here for convenience.
 
-### `Function.throwIfThis`
+### `Function.throwIfThis` and `Function.asyncThrowIfThis`
 
 ```js
 Function.throwIfThis = function (f) {
@@ -209,4 +211,4 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
 
 ## Web compatibility
 
-At least one library (https://github.com/WebReflection/function.this) introducing `Function.prototype.this` which may conflict with this proposal.
+At least one library (https://github.com/WebReflection/function.this) introduced `Function.prototype.this` which may conflict with this proposal.
