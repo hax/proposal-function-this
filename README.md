@@ -2,13 +2,13 @@
 
 ECMAScript proposal for `this` data property of plain functions.
 
-**Stage**: pre-0
+**Stage**: 0
 
-**Champion**: ?
+**Champion**: 贺师俊 (@hax)
 
 **Authors**: 贺师俊 (@hax)
 
-This proposal is currently pre-stage0.
+This proposal is currently stage 0.
 
 ## Motivation
 
