@@ -1,30 +1,27 @@
 void function () {
 	'use strict'
 
-	const returnThis = new Function('return this')
+	const PROP_NAME = 'this'
+
 	const funcToStr = Function.prototype.toString
+	const {defineProperty} = Reflect
 
-	if (!returnThis.this) {
+	if (!funcToStr[PROP_NAME]) {
 
-		Object.defineProperty(Function.prototype, 'this', {
-			get: function () {
-				switch (funcThis(this)) {
-					case 'bound':
-					case 'lexical':
-						return undefined
-					case 'new':
-					case 'dynmaic':
-						Object.defineProperty(this, 'this', {value: true, configurable: true})
-						return this.this
-					case 'none':
-						Object.defineProperty(this, 'this', {value: false, configurable: true})
-						return this.this
+		defineProperty(Function.prototype, PROP_NAME, {
+			get() {
+				const value = guessThis(this)
+				if (value != null) {
+					defineProperty(this, PROP_NAME, {value/*, configurable: true*/})
+					return this[PROP_NAME]
 				}
 			},
 			configurable: true,
 		})
 
-		const global = returnThis()
+		const global = typeof globalThis !== 'undefined'
+			? globalThis : new Function('return this')()
+
 		for (const name of Object.getOwnPropertyNames(global)) {
 			const value = global[name]
 			const type = typeof value
@@ -39,16 +36,33 @@ void function () {
 	function initStaticMethods(obj) {
 		Object.getOwnPropertyNames(obj).forEach(function (name) {
 			const val = obj[name]
-			if (hasThis(val)) Object.defineProperty(val, 'this', {value: false, configurable: true})
+			if (hasThis(val)) defineProperty(val, 'this', {value: false, configurable: true})
 		})
 	}
 
 	function hasThis(f) {
 		if (typeof f !== 'function') return false
-		const name = String(f.name)
-		if (name.startsWith('bound ')) return false
+		const {name} = f
+
+		// some spec internal functions?
+		if (name == null) return false
+
+		if (name !== '') {
+			if (name.startsWith('bound ')) return false
+			if (name.startsWith('get ')) return true
+			if (name.startsWith('set ')) return true
+		}
+
+		// TODO: need tiny token scanners for function source
+
 		const source = funcToStr.call(f)
-		if (/^(function|get|set|class) /.test(source)) return true
+
+		// method() {}
+		if (name !== '' && source.startsWith(name)) return true
+
+		if (/^class\b/.test(source) && (name === '' || !source.startsWith(name))) return false
+		if (/^["'[]/.test(source)) return true
+		if (/^((async\s+)?function)\b/.test(source)) return true
 		return false
 	}
 
@@ -58,6 +72,7 @@ void function () {
 		return source.startsWith('class ')
 			|| source.endsWith('{ [native code] }')
 			|| /\bthis\b/.test(source)
+			|| /\bsuper\b/.test(source)
 	}
 
 	function isTitleCase(s) {

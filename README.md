@@ -1,6 +1,6 @@
-# \<function>.this
+# \<function>.thisArgumentExpected
 
-ECMAScript proposal for `this` data property of plain functions.
+ECMAScript proposal for `thisArgumentExpected` data property of functions.
 
 **Stage**: 0
 
@@ -8,35 +8,23 @@ ECMAScript proposal for `this` data property of plain functions.
 
 **Authors**: 贺师俊 (@hax)
 
-This proposal is currently stage 0.
+This proposal is currently stage 0 and ready for present on 2020 Feb TC39 meeting.
 
 ## Motivation
 
-// TODO: translate to English
+The keyword `this` in JavaScript is often considered very confusing and hard to understanding. Sometimes the diffculties of learning `this` is overstated, make novices feel distressed and self-handicapped.
 
-JavaScript函数中的动态`this`常被认为存在设计缺陷，难以理解。虽然ES5加入了strict模式和Function.prototype.bind作为补救，但这些措施过于保守，以至于一些人认为这只是进一步复杂化了问题。
+ES6 already introduced arrow functions and classes to take some responsibilities of traditional functions, make the usage of `this` much clear than before. In practice, most JavaScript programmers can understand the usage of `this` well, but occasionally make mistakes. For example, when you add an event listener, you may forget to use arrow functions or `bind`, pass in the unbound method directly. This is just a simple mistake, but the resulting bug may be very hidden, and will only be exposed until the listener is called and access `this.foo`, and the error stack usually cannot be traced back to the point which cause the bug. And in non-strict functions, "global this" is used as "this value" if no "this argument" is provided, which make non-strict functions behave like a bound function in such cases — accessing `this.foo` won't generate error, makes the bug more difficult to find.
 
-幸好ES6加入了arrow functions和class，分担了传统函数的职责。正确使用这些特性，可以很好的将函数分为三类：
+So the real problem is lacking of the mechnism to provide language-level protections which can report such errors early.
 
-- class methods or method-like functions (dynmaic this)
-- static methods or plain functions (no this)
-- callback or thunk (lexical this)
+This proposal addresses this problem and proposes to add `thisArgumentExpected` data property to the function objects.
 
-这基本解决了传统函数身兼数职所导致的问题。只要遵循简单的代码原则，在绝大多数cases中不会再存在对`this`的混淆。
+The `thisArgumentExpected` property indicates whether the function expect "this argument" to be passed in. For methods and normal functions which have `this` reference in their FunctionBody, the value is `true`, otherwise the value is `false`. For arrow functions and bound functions, the value is `false`, for class constructors, the value is `null`.
 
-不幸的是，对`this`错误的教学方法（比如将所有`this`的不同用法罗列一处）以及一些历史APIs的拖累，导致社区仍然对`this`视若猛虎，过度夸张了`this`可能引发的混淆。这一方面使得新手产生了畏难情绪和自我设障，反过来进一步加深了我们对于`this`难学的偏见；另一方面也影响了TC39对`this`相关特性的推进，使我们缺乏改善`this`的机会。
-
-实际上，绝大多数JavaScript程序员都能掌握和理解`this`，只是偶尔会犯错，比如在需要添加event listener的时候，直接把unbound方法传入，而忘记使用arrow functions或bind。这本身只是一个简单失误，但导致的bug可能十分隐蔽，只在listener被调用，且访问了未预期的`this`上的属性或方法时才会暴露。所以问题在于我们缺乏语言级的保护措施，能在早期（如传入listener时）就报告错误。
-
-本提案就针对此问题，提议为函数增加`this` data property。
-
-`this`属性表示该函数是否使用dynamic this。注意，只有普通函数、方法具有该属性，arrow functions和bound functions（Function.prototype.bind调用所产生的函数）上没有该属性。
-
-通过检查`this`属性，设计良好的APIs如果希望接收callback，可以在接收到使用了dynamic this的函数时扔出异常，并且该异常的stack包含了传入unbound函数处从而很容易定位问题；而不必等到函数实际以undefined或global作为`this`被回调并产生问题时才被迫抛出异常，且该异常的stack中通常无法追溯到传入unbound函数处。
+By checking the `thisArgumentExpected`, well-designed APIs that want to receive callbacks can throw an error directly when they receive a function that have `thisArgumentExpected` value being `true`, and the error could contain better error message which is helpful to locate the bug.
 
 ## Use cases
-
-### event listener
 
 ```js
 class Test {
@@ -53,8 +41,8 @@ window.addEventListener('click', hax.showName) // <- no error, eventually output
 
 // safer API:
 function on(eventType, listener) {
-	if (listener.this) throw new TypeError(
-		'listener should not need dynamic this, please use arrow function or <function>.bind to generate a bound version')
+	if (listener.thisArgumentExpected) throw new TypeError(
+		'listener should not expect this argument, please use arrow function or <function>.bind')
 	//...
 }
 
@@ -67,148 +55,86 @@ $(window).on('click', test) // <- also ok
 function test() { console.log('test') }
 ```
 
-### component framework
-TODO
-
-### framework plugin
-TODO
-
 ## Semantics
 
 ```js
-const functionWithThis = function () { return this }
-const functionWithoutThis = function () {}
-const arrowFunction = () => this
-const boundFunction = functionWithThis.bind(null)
-const o = new class {
-	methodWithThis() { return this }
-	methodWithoutThis() { return super.toString() }
-}
-
-assert.equal ( getThis(functionWithThis), {value: true, enumerable: false, writable: false, configurable: true} )
-assert.equal ( getThis(functionWithoutThis), {value: false, enumerable: false, writable: false, configurable: true} )
-assert.equal ( getThis(arrowFunction), undefined )
-assert.equal ( getThis(boundFunction), undefined )
-assert.equal ( getThis(o.constructor), {value: true, enumerable: false, writable: false, configurable: true} )
-assert.equal ( getThis(o.methodWithThis), {value: true, enumerable: false, writable: false, configurable: true} )
-assert.equal ( getThis(o.methodWithoutThis), {value: false, enumerable: false, writable: false, configurable: true} )
-
-function getThis(f) {
-	return Object.getOwnPropertyDescriptor(f, 'this')
-}
+let pd = Object.getOwnPropertyDescriptor(callable, 'thisArgumentExpected')
+pd.enumerable // false
+pd.writable // false
+pd.configurable // true
+pd.value // true | false | null
 ```
 
-## Alternative names
+`pd.value`:
 
-- `<function>.dynamicThis`
-- `<function>.thisDynamic`
+- class constructor => `null`
+- bound function => `false`
+- arrow function => `false`
+- explicit this ([gilbert/es-explicit-this proposal](https://github.com/gilbert/es-explicit-this)) => `true`
+- implicit this (FunctionBody contains `this` or `super.foo`) => `true`
+- otherwise => `false`
 
-## Alternative semantic
+## Edge cases
 
-Instead of boolean value property for plain functions, it could be a string value property for all functions:
+Programmers could reconfig the property for some edge cases.
 
-- arrow functions: `"lexical"`
-- bound functions: `"bound"`
-- functions with this: `"dynamic"`
-- functions without this: `"none"`
-- class constructor: `"new"`
-
-## Helpers
-
-These helpers functions could be left to userland, but we include them here for convenience.
-
-### `Function.throwIfThis` and `Function.asyncThrowIfThis`
+### Direct `eval`
 
 ```js
-Function.throwIfThis = function (f) {
-	if (f.this) throw new TypeError()
+function func() {}
+func.thisArgumentExpected // false
+
+function directEval() {
+	eval('this')
 }
-Function.asyncThrowIfThis = async function (f) {
-	if (f.this) throw new TypeError()
-}
+directEval.thisArgumentExpected // false
+
+Object.defineProperty(directEval, 'thisArgumentExpected', {value: true})
 ```
 
-### `Function.toggleThis`
+### Old style constructor functions
 
 ```js
-Function.toggleThis = function (f) {
-	const pd = Object.getOwnPropertyDescriptor(f, 'this')
-	if (pd) {
-		pd.value = !pd.value
-		Object.defineProperty(f, 'this', pd)
+function implicitThis() { this }
+implicitThis.thisArgumentExpected // true
+
+function OldStyleConstructor(foo) {
+	this.foo = foo
+}
+new OldStyleConstructor(42)
+
+OldStyleConstructor.thisArgumentExpected // true
+Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: null})
+```
+
+```js
+function OldStyleConstructor(foo) {
+	if (new.target === undefined) return new OldStyleConstructor(foo)
+	this.foo = foo
+}
+Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: false})
+```
+
+### Optional `this` argument
+
+```js
+class X {
+	static of(...args) {
+		return new (this ?? X)(args)
 	}
 }
+X.of.thisArgumentExpected // true
+Object.defineProperty(X.of, 'thisArgumentExpected', {value: false})
 ```
 
-### Usage
+### Retrieve global this
+
 ```js
-function guardThis() {
-	if (this === undefined) {
-		// ...
-	}
-}
-
-Function.toggleThis(guardThis)
-Function.throwIfThis(guardThis) // not throw
-
-function implicitThis() {
-	return eval('this')
-}
-
-Function.toggleThis(implictThis)
-Function.throwIfThis(implictThis) // throw
+let getGlobalThis = new Function('return this')
+getGlobalThis.thisArgumentExpected // true
+Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
 ```
 
 ## Babel plugin and polyfill
 
 TODO
-
-## Fix current libraries
-
-### Array.prototype.forEach/map/some/every/reduce/reduceRight
-
-```js
-const {forEach} = Array.prototype
-Array.prototype.forEach = function (callback, thisArg = undefined) {
-	if (thisArg === undefined) {
-		if (!this.length) Function.asyncThrowIfThis(callback)
-		else Function.throwIfThis(callback)
-	}
-	return forEach.call(this, callback, thisArg)
-}
-```
-
-### setTimeout/setInterval
-
-```js
-const oldSetTimeout = setTimeout
-setTimeout = function (func, ...args) {
-	Function.asyncThrowIfThis(func)
-	return oldSetTimeout.call(this, func, ...args)
-}
-```
-
-### addEventListener
-
-```js
-const {addEventListener} = EventTarget.prototype
-EventTarget.prototype.addEventListener = function (eventType, listener, options = {}) {
-	if (options.throwIfThis) Function.throwIfThis(listener)
-	return addEventListener.call(this, eventType, listener, options)
-}
-```
-
-### Promise.prototype.then
-
-```js
-const {then} = Promise.prototype
-Promise.prototype.then = function (onFulfilled, onRejected) {
-	if (typeof onFulfilled === 'function') Function.asyncThrowIfThis(onFulfilled)
-	if (typeof onRejected === 'function') Function.asyncThrowIfThis(onRejected)
-	return then.call(this, onFulfilled, onRejected)
-}
-```
-
-## Web compatibility
-
-At least one library (https://github.com/WebReflection/function.this) introduced `Function.prototype.this` which may conflict with this proposal.
