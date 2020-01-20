@@ -55,6 +55,24 @@ on(window, 'click', test) // <- also ok
 function test() { console.log('test') }
 ```
 
+```js
+fetch(url).then(() => {
+	// do sth
+}, logger.processError)
+
+// last line should be `e => logger.processError(e)
+// not easy to discover the bug because `fetch(url)` rarely failed
+
+// Fix Promise.prototype.then
+let {then} = Promise.prototype
+Promise.prototype.then = function (onFulfilled, onRejected) {
+	if (onFulfilled?.thisArgumentExpected) throw new TypeError()
+	if (onRejected?.thisArgumentExpected) throw new TypeError()
+	return then.call(this, onFulfilled, onRejected)
+}
+```
+
+
 ## Semantics
 
 ```js
