@@ -153,6 +153,26 @@ getGlobalThis.thisArgumentExpected // true
 Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
 ```
 
+
+## Some complex examples
+
+```js
+function f() {
+	return function () {
+		return () => this
+	}
+}
+f.thisArgumentExpected // false
+f().thisArgumentExpected // true
+f()().thisArgumentExpected // false
+
+let o = {
+	m(x = () => super.foo) {}
+}
+o.m.thisArgumentExpected // true
+```
+
+
 ## Babel plugin and polyfill
 
 TODO
