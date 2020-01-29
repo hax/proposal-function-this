@@ -28,12 +28,12 @@ By checking the `thisArgumentExpected` property, well-designed APIs that want to
 
 ```js
 class Test {
-	constructor(name) {
-		this.name = name
-	}
-	showName() {
-		console.log(this.name)
-	}
+  constructor(name) {
+    this.name = name
+  }
+  showName() {
+    console.log(this.name)
+  }
 }
 
 const hax = new Test('hax')
@@ -41,9 +41,9 @@ window.addEventListener('click', hax.showName) // <- no error, eventually output
 
 // safer API:
 function on(eventTarget, eventType, listener, options) {
-	if (listener.thisArgumentExpected) throw new TypeError(
-		'listener should not expect this argument, please use arrow function or <function>.bind')
-	eventTarget.addEventListener(eventType, listener, options)
+  if (listener.thisArgumentExpected) throw new TypeError(
+    'listener should not expect this argument, please use arrow function or <function>.bind')
+  eventTarget.addEventListener(eventType, listener, options)
 }
 
 on(window, 'click', hax.showName) // <- throw TypeError
@@ -57,7 +57,7 @@ function test() { console.log('test') }
 
 ```js
 fetch(url).then(() => {
-	// do sth
+  // do sth
 }, logger.processError)
 
 // last line should be `e => logger.processError(e)
@@ -66,9 +66,9 @@ fetch(url).then(() => {
 // Fix Promise.prototype.then
 let {then} = Promise.prototype
 Promise.prototype.then = function (onFulfilled, onRejected) {
-	if (onFulfilled?.thisArgumentExpected) throw new TypeError()
-	if (onRejected?.thisArgumentExpected) throw new TypeError()
-	return then.call(this, onFulfilled, onRejected)
+  if (onFulfilled?.thisArgumentExpected) throw new TypeError()
+  if (onRejected?.thisArgumentExpected) throw new TypeError()
+  return then.call(this, onFulfilled, onRejected)
 }
 ```
 
@@ -104,7 +104,7 @@ function func() {}
 func.thisArgumentExpected // false
 
 function directEval() {
-	eval('this')
+  eval('this')
 }
 directEval.thisArgumentExpected // false
 
@@ -118,7 +118,7 @@ function implicitThis() { this }
 implicitThis.thisArgumentExpected // true
 
 function OldStyleConstructor(foo) {
-	this.foo = foo
+  this.foo = foo
 }
 new OldStyleConstructor(42)
 
@@ -128,8 +128,8 @@ Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: null}
 
 ```js
 function OldStyleConstructor(foo) {
-	if (new.target === undefined) return new OldStyleConstructor(foo)
-	this.foo = foo
+  if (new.target === undefined) return new OldStyleConstructor(foo)
+  this.foo = foo
 }
 Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: false})
 ```
@@ -138,9 +138,9 @@ Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: false
 
 ```js
 class X {
-	static of(...args) {
-		return new (this ?? X)(args)
-	}
+  static of(...args) {
+    return new (this ?? X)(args)
+  }
 }
 X.of.thisArgumentExpected // true
 Object.defineProperty(X.of, 'thisArgumentExpected', {value: false})
@@ -159,16 +159,16 @@ Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
 
 ```js
 function f() {
-	return function () {
-		return () => this
-	}
+  return function () {
+    return () => this
+  }
 }
 f.thisArgumentExpected // false
 f().thisArgumentExpected // true
 f()().thisArgumentExpected // false
 
 let o = {
-	m(x = () => super.foo) {}
+  m(x = () => super.foo) {}
 }
 o.m.thisArgumentExpected // true
 ```
