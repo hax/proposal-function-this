@@ -92,6 +92,7 @@ pd.value // true | false | null
 - implicit this (FunctionBody contains `this` or `super.foo`) => `true`
 - otherwise => `false`
 
+
 ## Edge cases
 
 Programmers could reconfig the property for some edge cases.
@@ -170,6 +171,23 @@ let o = {
 	m(x = () => super.foo) {}
 }
 o.m.thisArgumentExpected // true
+```
+
+
+## Built-in functions
+
+For built-in functions, it should have `thisArgumentExpected` be `null` if it always throw unless invoked via `new`, be `true` if it always throw when `this` argument passed in is `undefined`, otherwise be `false`.
+
+```js
+Map.thisArgumentExpected // null
+Date.thisArgumentExpected // false
+Object.thisArgumentExpected // false
+Object.prototype.valueOf.thisArgumentExpected // true
+Math.abs.thisArgumentExpected // false
+Array.isArray.thisArgumentExpected // false
+Array.of.thisArgumentExpected // false
+Promise.resolve.thisArgumentExpected // true
+setTimeout.thisArgumentExpected // false
 ```
 
 
