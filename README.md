@@ -154,6 +154,15 @@ getGlobalThis.thisArgumentExpected // true
 Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
 ```
 
+### `this: void` trick in TypeScript
+
+```ts
+function f(this: void) {
+  this.foo // Property 'foo' does not exist on type 'void'.ts(2339)
+}
+```
+
+Some people use `this: void` (or `this: never`) trick to prevent the use of `this`. We suggest TypeScript compiler emit `function f()` instead of `function f(this)` (when [explicit `this` parameter](https://github.com/gilbert/es-explicit-this) is introduced) in such cases to avoid `f.thisArgumentExpected` become `true` which is opposite to programmer's intention.
 
 ## Some complex examples
 
