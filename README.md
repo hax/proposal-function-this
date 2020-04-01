@@ -27,6 +27,8 @@ By checking the return value, well-designed APIs that want to receive callbacks 
 
 ## Use cases
 
+(Temporarily use `thisArgumentExpected` API option in the examples, see later section for other possible API options)
+
 ```js
 class Test {
   constructor(name) {
@@ -43,7 +45,7 @@ $(e).on('click', hax.showName) // <- no error, eventually output window.name
 // safer API:
 on(eventType, listener, options) {
   const eventTarget = this.element
-  if (Function.expectsThisArgument(listener)) throw new TypeError(
+  if (listener.thisArgumentExpected) throw new TypeError(
     'listener should not expect this argument, please use arrow function or <function>.bind')
   eventTarget.addEventListener(eventType, listener, options)
 }
@@ -87,7 +89,7 @@ console.info(1::plus(1));
 We could improve the semantic of `::`, do the check first to provide better dev experience.
 ```js
 const plus = x => this + x;
-// if (!Function.expectThisArgument(plus)) throw new TypeError()
+// if (!plus.thisArgumentExpected) throw new TypeError()
 console.info(1::plus(1)); // throw TypeError
 ```
 
