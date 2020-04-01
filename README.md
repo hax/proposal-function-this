@@ -1,6 +1,6 @@
-# \<function>.thisArgumentExpected
+# `this` argument reflection of functions
 
-ECMAScript proposal for `thisArgumentExpected` data property of function objects.
+ECMAScript proposal for `this` argument reflection of function objects.
 
 **Stage**: 0
 
@@ -8,7 +8,7 @@ ECMAScript proposal for `thisArgumentExpected` data property of function objects
 
 **Authors**: 贺师俊 (HE Shi-Jun)
 
-This proposal is currently stage 0 and ready for present on 2020 Feb TC39 meeting.
+This proposal is currently stage 0 and ready for present on 2020 March TC39 meeting.
 
 ## Motivation
 
@@ -18,11 +18,12 @@ ES6 already introduced arrow functions and classes to take some responsibilities
 
 So the real problem is **lacking of the mechnism to provide language-level protections** which can report such errors *early*.
 
-This proposal addresses this problem and proposes `thisArgumentExpected` data property of the function objects.
+This proposal propose an API to allow frameworks/libraries/devtools inspect
+the intended usage of a function, whether the function expect this argument to be passed in, if not match the expectation, frameworks/libraries/devtools could report error in early stage and provide better error/warning message.
 
-The `thisArgumentExpected` property indicates whether the function expect "this argument" to be passed in. For methods and normal functions which have `this` reference in their FunctionBody, the value is `true`, otherwise the value is `false`. For arrow functions and bound functions, the value is `false`, for class constructors, the value is `null`.
+For methods and normal functions which have `this` reference in their FunctionBody, the API should return `true`, otherwise the return value is `false`. For arrow functions and bound functions, the value is `false`, for class constructors, the value could be `null`.
 
-By checking the `thisArgumentExpected` property, well-designed APIs that want to receive callbacks can throw an error immediately when they receive a function that have `thisArgumentExpected` value being `true`, and the error could contain better error message which is helpful to locate the bug.
+By checking the return value, well-designed APIs that want to receive callbacks can throw an error immediately when they receive a function which expect `this` argument, and the error could contain better error message which is helpful to locate the bug.
 
 ## Use cases
 
@@ -37,168 +38,66 @@ class Test {
 }
 
 const hax = new Test('hax')
-window.addEventListener('click', hax.showName) // <- no error, eventually output window.name
+$(e).on('click', hax.showName) // <- no error, eventually output window.name
 
 // safer API:
-function on(eventTarget, eventType, listener, options) {
-  if (listener.thisArgumentExpected) throw new TypeError(
+on(eventType, listener, options) {
+  const eventTarget = this.element
+  if (Function.expectsThisArgument(listener)) throw new TypeError(
     'listener should not expect this argument, please use arrow function or <function>.bind')
   eventTarget.addEventListener(eventType, listener, options)
 }
 
-on(window, 'click', hax.showName) // <- throw TypeError
+$(window).on('click', hax.showName) // <- throw TypeError
 
-on(window, 'click', () => hax.showName()) // <- ok
-on(window, 'click', hax.showName.bind(hax)) // <- ok
+$(window).on('click', () => hax.showName()) // <- ok
+$(window).on('click', hax.showName.bind(hax)) // <- ok
 
-on(window, 'click', test) // <- also ok
+$(window).on('click', test) // <- also ok
 function test() { console.log('test') }
 ```
 
 ```js
-fetch(url).then(() => {
+request(url).then(() => {
   // do sth
 }, logger.processError)
 
 // last line should be `e => logger.processError(e)
 // not easy to discover the bug because `fetch(url)` rarely failed
 
-// Fix Promise.prototype.then
-let {then} = Promise.prototype
-Promise.prototype.then = function (onFulfilled, onRejected) {
-  if (onFulfilled?.thisArgumentExpected) throw new TypeError()
-  if (onRejected?.thisArgumentExpected) throw new TypeError()
-  return then.call(this, onFulfilled, onRejected)
-}
-```
-
-
-## Semantics
-
-```js
-let pd = Object.getOwnPropertyDescriptor(callable, 'thisArgumentExpected')
-pd.enumerable // false
-pd.writable // false
-pd.configurable // true
-pd.value // true | false | null
-```
-
-`pd.value`:
-
-- class constructor => `null`
-- bound function => `false`
-- arrow function => `false`
-- explicit this ([gilbert/es-explicit-this proposal](https://github.com/gilbert/es-explicit-this)) => `true`
-- implicit this (FunctionBody contains `this` or `super.foo`) => `true`
-- otherwise => `false`
-
-
-## Edge cases
-
-Programmers could reconfig the property for some edge cases.
-
-### Direct `eval`
-
-```js
-function func() {}
-func.thisArgumentExpected // false
-
-function directEval() {
-  eval('this')
-}
-directEval.thisArgumentExpected // false
-
-Object.defineProperty(directEval, 'thisArgumentExpected', {value: true})
-```
-
-### Old style constructor functions
-
-```js
-function implicitThis() { this }
-implicitThis.thisArgumentExpected // true
-
-function OldStyleConstructor(foo) {
-  this.foo = foo
-}
-new OldStyleConstructor(42)
-
-OldStyleConstructor.thisArgumentExpected // true
-Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: null})
-```
-
-```js
-function OldStyleConstructor(foo) {
-  if (new.target === undefined) return new OldStyleConstructor(foo)
-  this.foo = foo
-}
-Object.defineProperty(OldStyleConstructor, 'thisArgumentExpected', {value: false})
-```
-
-### Optional `this` argument
-
-```js
-class X {
-  static of(...args) {
-    return new (this ?? X)(args)
+// subclassed Promise
+class MyPromise extends Promise {
+  then(onFulfilled, onRejected) {
+    if (onFulfilled?.thisArgumentExpected) throw new TypeError()
+    if (onRejected?.thisArgumentExpected) throw new TypeError()
+    return super.then(onFulfilled, onRejected)
   }
 }
-X.of.thisArgumentExpected // true
-Object.defineProperty(X.of, 'thisArgumentExpected', {value: false})
 ```
 
-### Retrieve global this
+## Useful to future language features
 
 ```js
-let getGlobalThis = new Function('return this')
-getGlobalThis.thisArgumentExpected // true
-Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
+// example from https://www.smashingmagazine.com/2018/10/taming-this-javascript-bind-operator/
+const plus = x => this + x;
+console.info(1::plus(1));
+// "[object Window]1"
 ```
 
-### `this: void` trick in TypeScript
-
-```ts
-function f(this: void) {
-  this.foo // Property 'foo' does not exist on type 'void'.ts(2339)
-}
-```
-
-Some people use `this: void` (or `this: never`) trick to prevent the use of `this`. We suggest TypeScript compiler emit `function f()` instead of `function f(this)` (when [explicit `this` parameter](https://github.com/gilbert/es-explicit-this) is introduced) in such cases to avoid `f.thisArgumentExpected` become `true` which is opposite to programmer's intention.
-
-## Some complex examples
-
+We could improve the semantic of `::`, do the check first to provide better dev experience.
 ```js
-function f() {
-  return function () {
-    return () => this
-  }
-}
-f.thisArgumentExpected // false
-f().thisArgumentExpected // true
-f()().thisArgumentExpected // false
-
-let o = {
-  m(x = () => super.foo) {}
-}
-o.m.thisArgumentExpected // true
+const plus = x => this + x;
+// if (!Function.expectThisArgument(plus)) throw new TypeError()
+console.info(1::plus(1)); // throw TypeError
 ```
 
+## API options
 
-## Built-in functions
+- func.thisArgumentExpected (own data prop)
+- Function.prototype.thisArgumentExpected (getter/setter)
+- Function.expectThisArgument(f) (static method)
 
-For built-in functions, it should have `thisArgumentExpected` be `null` if it always throw unless invoked via `new`, be `true` if it always throw when `this` argument passed in is `undefined`, otherwise be `false`.
-
-```js
-Map.thisArgumentExpected // null
-Date.thisArgumentExpected // false
-Object.thisArgumentExpected // false
-Object.prototype.valueOf.thisArgumentExpected // true
-Math.abs.thisArgumentExpected // false
-Array.isArray.thisArgumentExpected // false
-Array.of.thisArgumentExpected // false
-Promise.resolve.thisArgumentExpected // true
-setTimeout.thisArgumentExpected // false
-```
-
+See [API.md](API.md) for details.
 
 ## Babel plugin and polyfill
 
