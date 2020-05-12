@@ -21,7 +21,9 @@ So the real problem is **lacking of the mechnism to provide language-level prote
 This proposal propose an API to allow frameworks/libraries/devtools inspect
 the intended usage of a function, whether the function expect this argument to be passed in, if not match the expectation, frameworks/libraries/devtools could report error in early stage and provide better error/warning message.
 
-For methods and normal functions which have `this` reference in their FunctionBody, the API should return `true`, otherwise the return value is `false`. For arrow functions and bound functions, the value is `false`, for class constructors, the value could be `null`.
+For methods and normal functions which have `this` reference in their FunctionBody, the API should return `true`, otherwise the return value is `false`. For arrow functions and bound functions, the value is always `false`, for class constructors, the value should be `null`.
+
+For built-in functions and platform APIs, it should have `thisArgumentExpected` be `null` if it always throw unless invoked via `new`, be `true` if it always throw when `this` argument passed in is `undefined`, otherwise be `false`. Basically most prototype methods would return `true`, other methods and functions return `false`, but there are some exceptions (see [built-ins.md](built-ins.md)).
 
 By checking the return value, well-designed APIs that want to receive callbacks can throw an error immediately when they receive a function which expect `this` argument, and the error could contain better error message which is helpful to locate the bug.
 
@@ -67,7 +69,7 @@ request(url).then(() => {
 // last line should be `e => logger.processError(e)
 // not easy to discover the bug because `fetch(url)` rarely failed
 
-// subclassed Promise
+// we can let request() return subclassed Promise to solve the problem
 class MyPromise extends Promise {
   then(onFulfilled, onRejected) {
     if (onFulfilled?.thisArgumentExpected) throw new TypeError()
@@ -122,7 +124,7 @@ arrayLike |> reverse
 So desugar to `object.method(x)` is not as great as we expect,
 may be doing the check could provide better dev experience.
 ```js
-// let's pipeline first check the expression
+// let pipeline first check the expression
 // if (expression.thisArgumentExpected) throw new TypeError()
 value |> expression
 ```
