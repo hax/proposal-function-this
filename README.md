@@ -18,10 +18,11 @@ ES6 already introduced arrow functions and classes to take some responsibilities
 
 So the real problem is **lacking of the mechnism to provide language-level protections** which can report such errors *early*.
 
-This proposal propose an API to allow frameworks/libraries/devtools inspect
-the intended usage of a function, whether the function expect this argument to be passed in, if not match the expectation, frameworks/libraries/devtools could report error in early stage and provide better error/warning message.
+This proposal propose a runtime reflection API to allow frameworks/libraries/tools (and possible future language features) inspect the intended usage of a function, whether the function expect this argument to be passed in, if not match the expectation, frameworks/libraries/tools (and possible future language features) could report error in early stage and provide better error/warning message.
 
 For methods and normal functions which have `this` reference in their FunctionBody, the API should return `true`, otherwise the return value is `false`. For arrow functions and bound functions, the value is always `false`, for class constructors, the value should be `null`.
+
+The three values are mutually exclusive, but theorically classical functions can play multiple roles (constructors, methods, plain functions) so there will be false positives, see [edge-cases.md](edge-cases.md).
 
 For built-in functions and platform APIs, it should have `thisArgumentExpected` be `null` if it always throw unless invoked via `new`, be `true` if it always throw when `this` argument passed in is `undefined`, otherwise be `false`. Basically most prototype methods would return `true`, other methods and functions return `false`, but there are some exceptions (see [built-ins.md](built-ins.md)).
 
