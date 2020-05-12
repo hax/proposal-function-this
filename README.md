@@ -93,6 +93,50 @@ const plus = x => this + x;
 console.info(1::plus(1)); // throw TypeError
 ```
 
+This could also work for pipeline operators:
+```js
+x |> object.method
+```
+Currently pipeline proposal would desugar it as `object.method(x)` to ensure
+using correct `this`, but it's easy to break
+```js
+x |> a?.foo ?? b.foo
+// desugar to (func ?? object.method)(x) and lose `this`
+```
+
+Other examples:
+```js
+// works for most 3rd party promise libraries,
+// but break if use built-in Promise
+let {resolve: toPromise} = Promise
+x |> toPromise
+```
+```js
+const {reverse} = Array.prototype
+// this work
+arrayLike |> reverse.call
+// but very easy to forget .call
+arrayLike |> reverse
+```
+
+So desugar to `object.method(x)` is not as great as we expect,
+may be doing the check could provide better dev experience.
+```js
+// let's pipeline first check the expression
+// if (expression.thisArgumentExpected) throw new TypeError()
+value |> expression
+```
+
+This could be even more useful in [function composition operator](https://github.com/TheNavigateur/proposal-pipeline-operator-for-function-composition)
+(possible follow-on proposal after pipeline)
+
+```js
+button.onclick = f1 +> f2 +> f3
+// semantic: button.onclick = event => (event |> f1 |> f2 |> f3)
+```
+because if there is any misuse of unbound method, the error would be thrown directly,
+do not need to wait until click event occured.
+
 ## API options
 
 - func.thisArgumentExpected (own data prop)
