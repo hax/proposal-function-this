@@ -4,9 +4,9 @@ For built-in functions and platform APIs, it should have `thisArgumentExpected` 
 
 Basically most prototype methods would return `true`, other methods and functions return `false`. But there are some exceptions.
 
-## pre-ES6 constructors
+## pre-ES6 built-in constructors
 
-Most pre-ES6 constructors could be called as normal functions (without `new`), and some even have different semantics for `new` and normal call (eg. `Date`), so they would have
+Most pre-ES6 built-in constructors could be called as normal functions (without `new`), and some even have different semantics for `new` and normal call (eg. `Date`), so they would have
 `thisArgumentExpected` be `false` instead of `null`.
 
 ## some static methods use `this` value
