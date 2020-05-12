@@ -43,7 +43,7 @@ const hax = new Test('hax')
 $(e).on('click', hax.showName) // <- no error, eventually output window.name
 
 // safer API:
-on(eventType, listener, options) {
+ElementWrapper.prototype.on = function (eventType, listener, options) {
   const eventTarget = this.element
   if (listener.thisArgumentExpected) throw new TypeError(
     'listener should not expect this argument, please use arrow function or <function>.bind')
