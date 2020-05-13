@@ -23,9 +23,6 @@ Object.defineProperty(directEval, 'thisArgumentExpected', {value: true})
 ### Old style constructor functions
 
 ```js
-function implicitThis() { this }
-implicitThis.thisArgumentExpected // true
-
 function OldStyleConstructor(foo) {
   this.foo = foo
 }
@@ -62,3 +59,8 @@ let getGlobalThis = new Function('return this')
 getGlobalThis.thisArgumentExpected // true
 Object.defineProperty(getGlobalThis, 'thisArgumentExpected', {value: false})
 ```
+
+## Avoid edge cases
+
+If you have the control of the source code of these edge case functions, there are possible ways to eliminate some cases without reconfiguration. For example, use classes to replace old style constructor functions. Generally, if we have function decorators available, we could use some declarative form like `@thisArgumentExpected(true) function f() {}`.
+
