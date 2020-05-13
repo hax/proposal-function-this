@@ -82,6 +82,10 @@ class MyPromise extends Promise {
 
 ## Useful to future language features
 
+In principle, we can't change the behavior of current APIs because it may break the web, but new APIs could leavage this feature. For example, https://github.com/tc39/proposal-upsert/issues/20 suggest `new Map ( [iterable [, valueFn]] )`, when the user calls `map.get(key)` and no entry for key exists, it’ll call `valueFn(key)` and insert and return the resulting value. Obviously `valueFn` should be a function with `thisArgumentExpected` be `false`. A common use case is `new Map([], Object)`, which will generate a new object as default. In some cases u need to change that to generating instance of class `MyObject`, it's possible u made mistake to write `new Map([], MyObject)`, with the feature used, an error will be thrown immediately, so u could correct code to `new Map([], v => new MyObject(v))` in first place.
+
+This feature could also be helpful to new operators, for example bind operator proposal.
+
 ```js
 // example from https://www.smashingmagazine.com/2018/10/taming-this-javascript-bind-operator/
 const plus = x => this + x;
